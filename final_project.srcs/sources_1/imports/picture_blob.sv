@@ -26,25 +26,25 @@
 //
 //////////////////////////////////////////////////
 module fingerprint
-   #(parameter WIDTH = 277,     // default picture width
-               HEIGHT = 182)    // default picture height
+   #(parameter WIDTH = 173,     // default picture width
+               HEIGHT = 114)    // default picture height
    (input pixel_clk_in,
     input [10:0] x_in,hcount_in,
     input [9:0] y_in,vcount_in,
     output logic [11:0] pixel_out);
 
-   logic [15:0] image_addr;   // num of bits for 277*182 ROM
+   logic [14:0] image_addr;   // num of bits for 277*182 ROM
    logic [7:0] image_bits, red_mapped, green_mapped, blue_mapped;
    // calculate rom address and read the location
    assign image_addr = (hcount_in-x_in) + (vcount_in-y_in) * WIDTH;
-   fingerprint_rom finger_rom (.clka(pixel_clk_in), .addra(image_addr), .douta(image_bits));
+   new_finger_rom fing_pic (.clka(pixel_clk_in), .addra(image_addr), .douta(image_bits));
 
    // use color map to create 4 bits R, 4 bits G, 4 bits B
    // since the image is greyscale, just replicate the red pixels
    // and not bother with the other two color maps.
-   red_fing red_coe (.clka(pixel_clk_in), .addra(image_bits), .douta(red_mapped));
-   green_fing green_coe (.clka(pixel_clk_in), .addra(image_bits), .douta(green_mapped));
-   blue_fing blue_coe (.clka(pixel_clk_in), .addra(image_bits), .douta(blue_mapped));
+   new_fing_red red_coen (.clka(pixel_clk_in), .addra(image_bits), .douta(red_mapped));
+   new_fing_green green_coen (.clka(pixel_clk_in), .addra(image_bits), .douta(green_mapped));
+   new_fing_blue blue_coen (.clka(pixel_clk_in), .addra(image_bits), .douta(blue_mapped));
    // note the one clock cycle delay in pixel!
    always_ff @ (posedge pixel_clk_in) begin
      if ((hcount_in >= x_in && hcount_in < (x_in+WIDTH)) &&

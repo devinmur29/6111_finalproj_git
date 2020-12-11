@@ -315,7 +315,7 @@ module top_level( input clk_100mhz,
 	///////////////////timer demo, value is in seconds////////////////////
 	
 	
-	timer #(.ONE_HZ_PERIOD(ONE_HZ_PERIOD)) t1 (.clock(clk_25mhz), .start_timer(timer_start),  .value(12'd300), .counting(counting), 
+	timer #(.ONE_HZ_PERIOD(ONE_HZ_PERIOD)) t1 (.clock(clk_25mhz), .start_timer(timer_start),  .value(12'd480), .counting(counting), 
 	 .expired_pulse(expired), .one_hz(one_hz_enable), .count_out(count), .ones(ones), .tens(tens), .minutes(minutes));
 	 
 	 
@@ -360,8 +360,8 @@ module top_level( input clk_100mhz,
 	 // version of minigame2 that uses accelerometer
      accel::e_orientation orientation;
      minigame_2 mgame2 (.vclock_in(clk_25mhz), .reset_in(mg_start), .hcount_in(hcount), .vcount_in(vcount), 
-	 .pixel_out(pixel_out2), .vsync_in(vsync),  .btnu(orientation == accel::top), .btnd(orientation == accel::bottom), .btnl(orientation == accel::left), 
-	 .btnr(orientation == accel::right),  .random(rand_out[1:0]), .led_r(ledout_mg2[2]), .led_b(ledout_mg2[0]), 
+	 .pixel_out(pixel_out2), .vsync_in(vsync),  .btnu(orientation == accel::top), .btnd(orientation == accel::bottom), .btnl(orientation == accel::right), 
+	 .btnr(orientation == accel::left),  .random(rand_out[1:0]), .led_r(ledout_mg2[2]), .led_b(ledout_mg2[0]), 
 	 .led_g(ledout_mg2[1]), .timer_count(count_mg2), .state(mg2_state), .fail(mg_fail2), .success(mg_success2));
 
 	 
@@ -401,7 +401,7 @@ module top_level( input clk_100mhz,
      
 
 	FPGA_graphics fpga_s (.vclock_in(clk_25mhz), .reset_in(system_reset), .hcount_in(hcount), .vcount_in(vcount),
-	 .mg_completed(i), .pixel_out(pixel_out_fpga));
+	 .mg_completed(i), .strikes(strike_count), .pixel_out(pixel_out_fpga));
 
 	FPGA_graphics_op fpga_m (.vclock_in(clk_25mhz), .reset_in(system_reset), .hcount_in(hcount), .vcount_in(vcount),
 	 .mg_completed(i_op), .pixel_out(pixel_out_fpgaop));
@@ -505,8 +505,8 @@ module top_level( input clk_100mhz,
      logic [11:0] gengine_pixel_out;
 
      localparam TITLE_SCREEN = 4'b0000;
-     localparam LOSE_SCREEN = 4'b0111;
-     localparam WIN_SCREEN = 4'b1000;
+     localparam LOSE_SCREEN = 4'b1000;
+     localparam WIN_SCREEN = 4'b0111;
      localparam MORSE_MINIGAME = 4'b0110;
      logic stop_sound_between_minigames;
 
@@ -568,7 +568,7 @@ module top_level( input clk_100mhz,
     assign data[3:0] = ones[3:0];
     assign data[7:4] = tens[3:0];
     assign data[11:8] = minutes;
-    assign data[31:12] = {7'b0, btnc_op,2'b0, strike_count, 4'b0};
+    assign data[31:12] = {minigame,3'b0, btnc_op,2'b0, strike_count, 4'b0};
     
     display_8hex display_mod (.clk_in(clk_25mhz), .data_in(data),
 	.seg_out({cg, cf, ce, cd, cc, cb, ca}), .strobe_out(an));
@@ -577,7 +577,7 @@ module top_level( input clk_100mhz,
 
     accelerometer accelerometer_builtin(
         .clk_in(clk_25mhz),
-        .reset_in(reset),
+        .reset_in(reset||mg_start),
         .acl_miso,
         .acl_mosi,
         .acl_sclk,
@@ -887,7 +887,7 @@ wire_cutting wc(.vclock_in(clk_65mhz),.reset_in(left),
 
     minigame_morse minigame_morse_inst(
         .clk(system_clock),
-        .reset(minigame_reset || system_reset),
+        .reset(minigame_reset || system_reset || mg_start),
 
         .play(morse_play_sound),
         .stop(morse_stop_sound),
@@ -1165,7 +1165,7 @@ module minigame_1( input vclock_in,
                    blob_D #(.WIDTH(40), .HEIGHT(40)) square_1(.x_in(11'd220), .hcount_in(hcount_in), .y_in(10'd400), .vcount_in(vcount_in), .pixel_out(pixel_ll), .color(color_sq1));
                    blob_D #(.WIDTH(40), .HEIGHT(40)) square_2(.x_in(11'd300), .hcount_in(hcount_in), .y_in(10'd400), .vcount_in(vcount_in), .pixel_out(pixel_lc), .color(color_sq2));
                    blob_D #(.WIDTH(40), .HEIGHT(40)) square_3(.x_in(11'd380), .hcount_in(hcount_in), .y_in(10'd400), .vcount_in(vcount_in), .pixel_out(pixel_lr), .color(color_sq3));
-                  //fingerprint(.pixel_clk_in(vclock_in), .x_in(11'd386), .y_in(10'd351), .hcount_in(hcount_in), .vcount_in(vcount_in), .pixel_out(pixel_f));
+                  fingerprint my_fing (.pixel_clk_in(vclock_in), .x_in(11'd234), .y_in(10'd183), .hcount_in(hcount_in), .vcount_in(vcount_in), .pixel_out(pixel_f));
                    
                    logic[11:0] diff1;
                    logic[11:0] diff2;
@@ -1324,10 +1324,10 @@ module minigame_2( input vclock_in,
                    logic [11:0] color_1, color_2, color_3, color_4, pixel_out1, pixel_out2, pixel_out3, pixel_out4;
                    logic [1:0] color_rand;
                    
-                   circle_blob  #(.RADIUS(16)) circle1 (.x_in(11'd320), .y_in(10'd216), .vclock_in(vclock_in), .vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_1), .pixel_out(pixel_out1));
-                   circle_blob  #(.RADIUS(16)) circle2 (.x_in(11'd344), .y_in(10'd240), .vclock_in(vclock_in),.vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_2), .pixel_out(pixel_out2));
-                   circle_blob  #(.RADIUS(16)) circle3 (.x_in(11'd320), .y_in(11'd264), .vclock_in(vclock_in),.vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_3), .pixel_out(pixel_out3));
-                   circle_blob  #(.RADIUS(16)) circle4 (.x_in(11'd296), .y_in(10'd240), .vclock_in(vclock_in), .vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_4), .pixel_out(pixel_out4));
+                   circle_blob  #(.RADIUS(32)) circle1 (.x_in(11'd320), .y_in(10'd228), .vclock_in(vclock_in), .vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_1), .pixel_out(pixel_out1));
+                   circle_blob  #(.RADIUS(32)) circle2 (.x_in(11'd416), .y_in(10'd300), .vclock_in(vclock_in),.vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_2), .pixel_out(pixel_out2));
+                   circle_blob  #(.RADIUS(32)) circle3 (.x_in(11'd320), .y_in(11'd372), .vclock_in(vclock_in),.vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_3), .pixel_out(pixel_out3));
+                   circle_blob  #(.RADIUS(32)) circle4 (.x_in(11'd224), .y_in(10'd300), .vclock_in(vclock_in), .vcount_in(vcount_in), .hcount_in(hcount_in), .color(color_4), .pixel_out(pixel_out4));
                    
                    assign pixel_out = pixel_out1 + pixel_out2 + pixel_out3 + pixel_out4;
                    assign btnu1 = btnu & !prev_btnu;

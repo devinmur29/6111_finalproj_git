@@ -257,7 +257,7 @@ module minigame_morse(
 
     // timing values, for counter
     // one DIT is equal to the length of one dot
-    localparam DIT = 32'd4_000_000;
+    localparam DIT = 32'd6_000_000;
     localparam DOT_DASH_SPACE_TIMING = 1;
     localparam CHARACTER_SPACE_TIMING = 3;
     localparam WORD_SPACE_TIMING = 7;
