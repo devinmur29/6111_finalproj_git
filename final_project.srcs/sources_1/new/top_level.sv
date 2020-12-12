@@ -68,16 +68,7 @@ module top_level( input clk_100mhz,
     parameter ONE_HZ_PERIOD = 25_000_000;
     parameter DEBOUNCE_COUNT = 1_000_000;
     
-    //SCENE AND MINIGAME STATES
-    parameter HOME = 4'd0;
-    parameter WIN = 4'd1;
-    parameter LOSE = 4'd2;
-    parameter SHUFFLE =4'd3;
-    parameter MG_S=4'd4;
-    parameter START = 4'd5;
-    parameter SYNC = 4'd6;
-    parameter MG_M = 4'd7;
-     
+   
     logic timer_start, counting, expired, one_hz_enable; //Game timer signals
     logic mg_start, win_start, lose_start; //start signals for the minigame, win, and lose screens
     logic mg_fail1, mg_fail2, mg_fail3, mg_fail4, mg_fail5, mg_fail6;
@@ -109,8 +100,7 @@ module top_level( input clk_100mhz,
     logic stop_sound; //stop a sound
     logic [4:0] sound_id; //sound to be played or stopped
     
- /////////////////////////////MICROPHONE WILL BE INCORPORATED BEFORE CHECKOFF///////////////////////////////////////////////////////////
-    
+ 
     ///////////////////MIC AND FFT VARIABLES//////////////////////
     parameter SAMPLE_COUNT = 4164; //2082;//gets approximately (will generate audio at approx 21 kHz sample rate.
     
@@ -270,7 +260,7 @@ module top_level( input clk_100mhz,
     
  //   assign minigame_order_in = {4'b0010, 4'b0100, 4'b0101, 4'b0001, 4'b0101, 4'b0100};
 //    assign minigame_order_in = {4'b0010, 4'b0010, 4'b0001, 4'b0001, 4'b0010, 4'b0001};
-    assign minigame_order_in = {4'b0010, 4'b0100, 4'b0001, 4'b0010, 4'b0101, 4'b0110};
+    assign minigame_order_in = {4'b0010, 4'b0100, 4'b0001, 4'b0101, 4'b0101, 4'b0110};
     
     always_comb begin
         case(minigame)
@@ -365,19 +355,15 @@ module top_level( input clk_100mhz,
 	 .led_g(ledout_mg2[1]), .timer_count(count_mg2), .state(mg2_state), .fail(mg_fail2), .success(mg_success2));
 
 	 
-//	 minigame_2 mgame2 (.vclock_in(clk_25mhz), .reset_in(mg_start), .hcount_in(hcount), .vcount_in(vcount), 
-//	 .pixel_out(pixel_out2), .vsync_in(vsync),  .btnu(up), .btnd(down), .btnl(left), 
-//	 .btnr(right),  .random(rand_out[1:0]), .led_r(ledout_mg2[2]), .led_b(ledout_mg2[0]), 
-//	 .led_g(ledout_mg2[1]), .timer_count(count_mg2), .state(mg2_state), .fail(mg_fail2), .success(mg_success2));
-//	 /*
+
 	 /////////////////////minigame 3/////////////////////////////////////////////////
-//	 logic [9:0] led_minigame3;
+	 logic [9:0] led_minigame3;
 	 
-//	     micr_minigame minigame_3 (.vclock_in(clk_25mhz), .reset_in(mg_start), .hcount_in(hcount), .vcount_in(vcount), .hsync_in(hsync),
-//            .vsync_in(vsync), .blank_in(blanking), .button(center), .sqrt_data(sqrt_data), 
-//            .sqrt_valid(sqrt_valid), .sqrt_last(sqrt_last), .minigame_number(minigame),
-//            .completed(mg_success3), .phsync_out(phsync), .pvsync_out(pvsync), 
-//            .pblank_out(pblank), .pixel_out(pixel_out3), .cool_led(led_minigame3));
+	     micr_minigame minigame_3 (.vclock_in(clk_25mhz), .reset_in(mg_start), .hcount_in(hcount), .vcount_in(vcount), .hsync_in(hsync),
+            .vsync_in(vsync), .blank_in(blanking), .button(center), .sqrt_data(sqrt_data), 
+            .sqrt_valid(sqrt_valid), .sqrt_last(sqrt_last), .minigame_number(minigame),
+            .completed(mg_success3), .phsync_out(phsync), .pvsync_out(pvsync), 
+            .pblank_out(pblank), .pixel_out(pixel_out3), .cool_led(led_minigame3));
    /////////////////////////////////////////////////////////////////////////////////////////////////////
  
    
@@ -451,54 +437,13 @@ module top_level( input clk_100mhz,
      ////////////////////////////////////////////////////////GAMEPLAY FSM///////////////////////////////////////////////
      assign reset = sw[15];
      assign multiplayer = sw[13:12];
-     //assign minigame = 3'b010; //choose which minigame is playing
      assign play_again = sw[11];
+     
+     game_fsm fsm_inst ( .clk_25mhz, .system_reset, .done_shuffle, .mg_fail, .mg_success,.expired,
+     .play_again, .i_op, .strike_count_op, .minigame_order_out, .multiplayer, .i, .strike_count, .timer_start, .start_shuffle,
+     .multiplayer_reset, .mg_start, .lose_start, .win_start, .minigame, .my_sync(sw[10]), .other_sync(btnc_op));
  
-     always_ff @(posedge clk_25mhz) begin
-        if(system_reset) begin
-            game_state <= SHUFFLE;
-            minigame <= 4'b0000;
-            
-        end else begin
-            case(game_state)
-                SHUFFLE :   begin start_shuffle <=1; game_state <= HOME; 
-                                  i <= 3'b000;
-                                  strike_count <= 2'b00;end
-                HOME    :   begin  game_state <= (multiplayer!=2'b00 &done_shuffle)? multiplayer[1]?SYNC:  START : HOME;
-                                    start_shuffle <= 0;
-                                    if(multiplayer[1] & done_shuffle) multiplayer_reset <= 1;
-                                    if(multiplayer==2'b01 & done_shuffle) begin timer_start <=1;end end//multiplayer/singleplayer stuff
-                                    
-                SYNC    :   begin   multiplayer_reset <= 0; game_state <= (sw[10] & btnc_op)?START:SYNC; 
-                                    if(sw[10] & btnc_op) timer_start <= 1;end
-                START   :   begin mg_start <=1; minigame <= minigame_order_out[i]; multiplayer_reset <=0; 
-                                    game_state <=(mg_fail|mg_success)?START: multiplayer[1]?MG_M:MG_S; timer_start<=0; end
-                
-                MG_M      :   begin  mg_start <= 0;
-                                   game_state <= (expired|i_op==6)?LOSE:(strike_count_op==2'b11)?WIN:(mg_fail)?((strike_count==2)?LOSE:START):(mg_success)?((i==3'd5)?WIN:START):MG_M;
-                                   strike_count <= expired? 2'b11:mg_fail?strike_count+1:strike_count;
-                                   if (mg_success) i<=i+1;
-                                   if(expired| i_op ==6|(strike_count_op !=2'b11&mg_fail&strike_count==2)) lose_start <=1;
-                                   else if(strike_count_op==2'b11|(mg_success&i==3'd5)) win_start <=1;   end
-                MG_S      :   begin  mg_start <= 0;
-                                   game_state <= (expired)?LOSE:(mg_fail)?((strike_count==2)?LOSE:START):(mg_success)?((i==3'd5)?WIN:START):MG_S;
-                                   strike_count <= expired? 2'b11:mg_fail?strike_count+1:strike_count;
-                                   if (mg_success) i<=i+1;
-                                   if(expired|(mg_fail&strike_count==2)) lose_start <=1;
-                                   else if(mg_success&i==3'd5) win_start <=1;   end
-                LOSE    :   begin lose_start<=0; 
-                                    minigame <= (play_again)?4'b0000: 4'b0111;
-                                    game_state <= (play_again)?SHUFFLE:LOSE;
-                                    //if(play_again) homescreen_start <=1;
-                                   end
-                WIN     :   begin win_start <= 0; 
-                                   minigame <= (play_again)?4'b0000:4'b1000;
-                                   game_state <= (play_again)?SHUFFLE:WIN; end
-                                   //if(play_again) homescreen_start <=1;end
-                
-            endcase
-         end
-     end
+    
      //Graphics based on the minigame being played
  
      logic prev_onehz;
@@ -1129,21 +1074,10 @@ endmodule
 /////////////////////////////////////////////////////////////////////
 
 
-module minigame_1( input vclock_in,
-                   input reset_in,
-                   input [10:0] hcount_in,
-                   input [9:0] vcount_in,
-                   input [1:0] random,
-                   input [3:0] sw,
-                   input btnu, btnl, btnd, btnr,
-                   input vsync_in,
-                   input [12:0] temp_in,
+module minigame_1( input vclock_in, input reset_in, input [10:0] hcount_in, input [9:0] vcount_in, input [1:0] random,
+                   input [3:0] sw, input btnu, btnl, btnd, btnr, input vsync_in, input [12:0] temp_in, output logic [11:0] pixel_out,
+                   output logic success, fail);
                    
-                   output logic [11:0] pixel_out,
-                   output logic success, fail
-               
-                   
-                   );
                    parameter START = 3'b000;
                    parameter FIRST_SQUARE = 3'b001;
                    parameter SECOND_SQUARE = 3'b010;
@@ -1272,25 +1206,9 @@ endmodule
 /////////////////////////////////////////////////////////////////////////////
 
 
-module minigame_2( input vclock_in,
-                   input reset_in,
-                   input [10:0] hcount_in,
-                   input [9:0] vcount_in,
-                   input [1:0] random,
-                   input btnu, btnl, btnd, btnr,
-                   //input hsync_in,
-                   input vsync_in,
-                   //input blank_in,
-                   
-                   output logic [11:0] pixel_out,
-                   output logic [11:0] timer_count,
-                   output logic led_r,
-                   output logic  led_g,
-                   output logic  led_b,
-                   output logic [3:0] state,
-                   output logic success, fail
-                   
-                   );
+module minigame_2( input vclock_in, input reset_in, input [10:0] hcount_in, input [9:0] vcount_in, input [1:0] random,
+input btnu, btnl, btnd, btnr, input vsync_in, output logic [11:0] pixel_out, output logic [11:0] timer_count,
+ output logic led_r, output logic  led_g,output logic  led_b, output logic [3:0] state,output logic success, fail );
                    
                    parameter  INIT = 4'b0000;
                    parameter FLASH_1 = 4'b0001;

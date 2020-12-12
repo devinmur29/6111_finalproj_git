@@ -26,9 +26,7 @@ module FPGA_graphics( input vclock_in,
                       input [9:0] vcount_in,
                       input [2:0] mg_completed,
                       input [1:0] strikes,
-                      output logic [11:0] pixel_out
-
-    );
+                      output logic [11:0] pixel_out);
     logic [11:0] fpga_pixel, pixel_out1, pixel_out2, pixel_out3, pixel_out4, pixel_out5, pixel_out6;
     logic [11:0] s1_out, s2_out;
     
@@ -96,9 +94,7 @@ module FPGA_graphics_op( input vclock_in,
                       input [10:0] hcount_in,
                       input [9:0] vcount_in,
                       input [2:0] mg_completed,
-                      output logic [11:0] pixel_out
-
-    );
+                      output logic [11:0] pixel_out);
     logic [11:0] fpga_pixel, pixel_out1, pixel_out2, pixel_out3, pixel_out4, pixel_out5, pixel_out6;
     logic [11:0] color_1, color_2, color_3, color_4, color_5, color_6;
     picture_blob_fpga fpga_inst_op (.pixel_clk_in(vclock_in), .x_in(11'd371), .y_in(10'd15), .hcount_in(hcount_in),
